@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-deployment
+  namespace: my-namespace
+  labels:
+    app: my-app
+spec:
+  replicas: 4
+  selector:
+    matchLabels:
+      app: my-app
+  template:
+    metadata:
+      labels:
+        app: my-app
+        role: my-role
+    spec:
+      terminationGracePeriodSeconds: 120
+      containers:
+      - name: nginx
+        image: public.ecr.aws/nginx/nginx:1.23
+        ports:
+        - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: my-app
+  namespace: my-namespace
+  labels:
+    app: my-app
+spec:
+  selector:
+    app: my-app
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80

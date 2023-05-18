@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ecsdemo-backend
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      ecs-cluster: core-infra
+      ecs-task-definition: ecsdemo-backend-12
+  strategy:
+    rollingUpdate:
+      maxSurge: 100%
+      maxUnavailable: 34%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        ecs-cluster: core-infra
+        ecs-task-definition: ecsdemo-backend-12
+    spec:
+      containers:
+      - env: []
+        image: public.ecr.aws/aws-containers/ecsdemo-nodejs:c3e96da
+        name: ecsdemo-nodejs
+        ports:
+        - containerPort: 3000
+          protocol: TCP
+---

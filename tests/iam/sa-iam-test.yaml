@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::022457860714:role/eksctl-test-eks-managed-addon-iamserviceacco-Role1-BO12D8RJ7LKE
+  creationTimestamp: "2023-04-12T22:54:22Z"
+  labels:
+    app.kubernetes.io/managed-by: eksctl
+  name: iam-test
+  namespace: default
+  resourceVersion: "6808247"
+  uid: 6a1aa626-15a2-40ad-b85d-f6473d691c9c
+secrets:
+- name: iam-test-token-lckjm

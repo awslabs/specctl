@@ -1,17 +1,179 @@
-## My Project
+# specctl 
+`specctl` is a command-line based tool to extract and transform Kubernetes objects to ECS and vice versa. It has two modes, `-m k2e` (default) convert Kubernetes to ECS and `-m e2k` for ECS to Kubernetes. Currenly, only ECS Fargate is supported. 
+For Kubernetes to ECS converstion the tool uses [Terraform](https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli) to create all the necessary AWS resources needed to run services and tasks on ECS. For ECS to Kubernetes you can simply use `kubectl` on the generated spec. 
 
-TODO: Fill this README out!
+### Getting Started
+* Install [Terraform](https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli)
+* Install `mwinit` to get access to the Gitlab repo. 
+* I would recommend to use `virtualenv` to avoid any conflicts with preinstalled Python libraries. All testing done on Mac OS 13.2.1.
 
-Be sure to:
+```bash
+git clone git@ssh.gitlab.aws.dev:arvsoni/specctl.git
+cd specctl
+pip install --editable .
+specctl --help
+```
+### Kubernetes to ECS
+Let us first create an ECS cluster:
+```bash
+cd terraform/core-infra
+terraform init
+terraform apply --auto-approve
+cd ../..
+```
+Above will create an ECS cluster named `core-infra`.
+#### A simple example - NGINX deployment
+The `./tests/nginx` has a simple NGINX Kubernetes deployment specification. `specctl` will convert this into an ECS Fargate task definition and service definition. 
 
-* Change the title in this README
-* Edit your repository description on GitHub
+```bash
+specctl -s tests/nginx
+cd output/namespaces
+terraform init && terraform apply --auto-approve
+cd ../default/nginx-svc
+terraform init && terraform apply --auto-approve
+...
+...
+Apply complete! Resources: 17 added, 0 changed, 0 destroyed.
 
-## Security
+Outputs:
 
-See [CONTRIBUTING](CONTRIBUTING.md#security-issue-notifications) for more information.
+application_url = "http://nginx-svc-alb-xxxxx.us-west-2.elb.amazonaws.com"
+```
+Click on the URL and you should see the NGINX home page! **Congrats, you have converted Kubernetes simple spec to ECS!**
 
-## License
+#### OK, what did `specctl` do?
+The `specctl` will generate following artifacts in `./output` directory.
+* `namespaces` : contains (a) Kubernetes namespaces for creating CloudMap namespaces for service discovery, and (b) SSM parameters with both simple string obtained from ConfigMaps and secure strings obtained from Secrets. The Terraform code to create required AWS resources is also generated. The terraform init and apply commands created all the resources based on data extracted from Kubernetes namespaces, configmaps, and secrets.
+* `<namespace>/<service>` : a set of folders one for each Kubernetes namespace and inside that a service folder one for each Kubernetes service in the namespace. The Terraform code to create the service, task definition, and if applicable ALB resources, is auto-generated and available in the service folder. The terraform init and apply commands created all resources based on data extracted from Kubernetes service and deployments.
 
-This project is licensed under the Apache-2.0 License.
+To clean up, assuming you are in `specctl` directory
+```bash
+cd output/default/nginx-svc
+terraform destroy --auto-approve
+cd ../../namespaces
+terraform destroy --auto-approve
+cd ../..
+rm -rf output
+```
 
+### Conversions at scale from a cluster
+`specctl` is built with scalable migration in mind. For the Kubernetes to ECS migration, for example, every service has its Terraform code and extracted settings in a seprate folder. By adding a CI/CD pipeline and S3 bucket (for Terraform state), the deployment of ECS services can be completely automated for all the services. The Terraform infra-as-code approach makes it easy to extend and customize to meet customer's application needs. 
+
+To test conversion at scale for Kubernetes to ECS, we can use the `tests/retail-store` example. Start by creating this application in Kubernetes. You can use `minikube`if you don't have a Kubernetes cluster handy. There is a convenience script `specctl/bin/migrate.sh` to recursively apply `terraform init` and `terraform apply --auto-approve` in each of the service directories. 
+
+Assuming you are in `specctl` directory.
+```bash
+kubectl apply -f tests/retail-store
+...
+... (wait for apply to finish)
+...
+```
+```bash
+specctl 
+
+* arn:aws:eks:us-west-2:xxxx:cluster/test-eks-managed (select your Kubernetes cluster)
+...
+...
+cd output
+cd namespaces
+terraform init && terraform apply --auto-approve
+...
+...
+```
+The above will create all the shared resources in various namespaces that are extracted. Shared resources include SSM Parameters, ALBs, CloudMap namespaces. Now you can run the `migrate.sh` script from the `/output` folder to recursively create all the extracted services. Below is assuming your are in `namespaces` folder from above step.
+
+```bash
+cd ..
+source ../bin/migrate.sh apply
+```
+You should see a lot of services created in ECS - `ui`,`carts`, `catalog` ... The `ui` service is load balanced and if you access the ALB URL you will see the same home page as when you access the `ui` service in Kubernetes. Play around with the app and make sure all the inter-service communication is working in both ECS and Kubernetes!
+**Congrats, you have just migrated 7 services in matter of minutes!** And same approach can be adapted to do scalable migrations.
+
+To clean up, assuming you are in `specctl` directory, follow below commands which will use `terraform destroy` to clean up:
+```bash
+cd output
+mv namespaces ../
+source ../bin/migrate.sh destroy 
+...
+... (wait for destroy to finish)
+...
+mv ../namespaces .
+cd namespaces
+terraform destroy --auto-approve
+cd ../..
+rm -rf output
+```
+#### What all K8s objects does specctl convert to ECS? 
+- [X] Deployment
+- [X] Service including ClusterIP, Load Balancer
+- [X] Ingress with HTTP 
+- [X] Pod IAM via Service Account
+- [X] ConfigMaps
+- [X] Secrets
+- [X] Container specs along with init-containers, and named ports handling
+- [X] Fargate size determination based on cpu and mem reservation and limit
+- [X] Ingress with HTTPS esp. certificate handling
+- [X] Pod Security Group
+- [ ] Jobs
+- [ ] Container volumes
+- [ ] ?
+
+**Note** K8s allows multiple variations for the service discovery, for example, `svc-name` or `svc-name.namespace` or `svc-name.namespace.svc.cluster.local`. But in ECS the service discovery name is `svc-name.namespace` (where namespace is in CloudMap). You may need to do some manual changes to the service endpoints configurations if they are not able to discover each other. This concern applies to both ECS to K8s and K8s to ECS conversions. 
+
+### ECS to Kubernetes 
+To do the reverse simply run the below command and it will generate the Kubernetes deployment, service, configmap, and secrets YAML specification files. Note to change the cluster name and/or region name if you created ECS cluster in a different region or are using your own ECS cluster in a different region. You can create Kubernetes namespace and deploy the generated artifacts to test. 
+
+```bash
+specctl -m e2k --ecs_region_name us-west-2 --ecs_cluster_name core-infra
+ls output/core-infra
+```
+#### What all ECS objects does specctl convert to Kubernetes?
+- [X] ECS Task to Pod
+- [X] ECS Service to K8s Service & K8s Deployment  
+- [X] ECS Load Balanced Service to K8s Ingress
+- [X] SSP Parameter Simple Strings to K8s ConfigMap 
+- [X] SSP Parameter SecureString to K8s Secrets
+- [X] Secrets Manager to K8s Secrets
+- [X] Task IAM to IAM annotations on Service Account
+- [X] Task Security Group to EKS Security Group Policy 
+- [X] First "." delimiter of CloudMap namespace to K8s namespace 
+
+### Features of `specctl`
+```bash
+> specctl --help
+Usage: specctl [OPTIONS]
+
+Options:
+  -m, --mode [k2e|e2k]            Transform mode - k2e K8s-to-ECS, e2k ECS-
+                                  to-K8s
+  -s, --source TEXT               Path to k8s spec file or dir
+  -c, --context TEXT              Kubeconfig context name to load
+  -l, --log_level [DEBUG|INFO|WARNING|ERROR|CRITICAL]
+                                  Select log level
+  -n, --namespaces TEXT           Only fetch namespaces specified here as
+                                  comma separated string. Applies only when
+                                  converting from K8s clusters and not from
+                                  spec files
+  --td_file TEXT                  File to write ECS task definition json
+  --sd_file TEXT                  File to write ECS service definition json
+  --input_file TEXT               File with additional input parameters for
+                                  task, container, and/or services
+  --tfvars_file TEXT              File to write the Terraform tfvars
+  --output_directory TEXT         Path to output directory
+  --ecs_cluster_name TEXT         ECS cluster to extract services and tasks
+  --ecs_region_name TEXT          Region name for ECS cluster
+  --sgp                           Create EKS Security Group Policy from task
+                                  security groups
+  --help                          Show this message and exit.
+```
+* `specctl` currenly reads and extracts information from Kubernetes `Deployment`,`Service`, `ConfigMap`, and `Secrets` objects. It can read these objects from a file/folder or directly from a Kubernetes cluster.
+* If `-s` source path to the K8s YAML file or directory is provided, `specctl` will use those specification files to read and extract information to create `taskdefinition.json`, `servicedefinition.json`, and `terraform.tfvars` files.
+* If `-c`, cluster kubeconfig context is provided, then `specctl` will read the deployments, services, configmaps, secrets directly from K8s cluster and generate the output files.
+* If both `-s` and `-c` are provided then behavior is same as just `-s`, that is, to process file(s) at that source path.
+* If neither `-s` and `-c` are provided then `specctl` will load all the contexts from kubeconfig and prompt the user to pick one.
+* The `-l` option is to control logging. Default log level is `INFO`.
+* The `--td_file` refers to JSON file for task definition and is set to `taskdefinition.json`. The actual output file is of the format `<output_directory>/<service_namespace>/<service_name>/taskdefinition.json`
+* The `--sd_file` refers to JSON file for service definition and is set to `servicedefinition.json`. The actual output file is of the format `<output_directory>/<service_namespace>/<service_name>/taskdefinition.json`
+* The `--input_file` is to provide additional input to add or update the parsed input in task definition and service definition JSON output. See sample [input.json](./lb_service_input.json.example) files for content format.
+* The `--tfvars_file` is to provide the terraform tfvars output and set to `terraform.tfvars`. The actual output is of the form `<output_directory>/terraform.tfvars` and `<output_directory>/<service_namespace>/<service_name>/terraform.fvars`.
+* The `--output_directory` is the path to output directory. Default is `./output`.

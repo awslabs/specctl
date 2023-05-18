@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: init-test
+  namespace: init-test
+  labels:
+    app: init-test
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: init-test
+  template:
+    metadata:
+      labels:
+        app: init-test
+    spec:
+      containers:
+      - name: myapp-container
+        image: busybox:1.28
+        command: ['sh', '-c', 'echo The app is running! && sleep 3600']
+      initContainers:
+      - name: init-myservice
+        image: busybox:1.28
+        command: ['sh', '-c', "until nslookup ecsdemo-backend.ecsdemo.svc.cluster.local; do echo waiting for ecsdemo-backend; sleep 2; done"]
+ 

@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    blueprint: ecsdemo-frontend
+    githubrepo: github-com-aws-ia-ecs-blueprints
+  name: ecsdemo-frontend
+spec:
+  ports:
+  - port: 3000
+    protocol: TCP
+    targetPort: 3000
+  selector:
+    ecs-cluster: core-infra
+    ecs-task-definition: ecsdemo-frontend-114
+  type: LoadBalancer
+---
