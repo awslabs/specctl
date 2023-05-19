@@ -1,16 +1,19 @@
 # specctl 
-`specctl` is a command-line based tool to extract and transform Kubernetes objects to ECS and vice versa. It has two modes, `-m k2e` (default) convert Kubernetes to ECS and `-m e2k` for ECS to Kubernetes. Currenly, only ECS Fargate is supported. 
+The `specctl` is a command-line based tool to extract and transform Kubernetes objects to ECS and vice versa. It has two modes, `-m k2e` (default) convert Kubernetes to ECS and `-m e2k` for ECS to Kubernetes. Currenly, only ECS Fargate is supported. 
 For Kubernetes to ECS converstion the tool uses [Terraform](https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli) to create all the necessary AWS resources needed to run services and tasks on ECS. For ECS to Kubernetes you can simply use `kubectl` on the generated spec. 
 
 ### Getting Started
 * Install [Terraform](https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli)
-* Install `mwinit` to get access to the Gitlab repo. 
 * I would recommend to use `virtualenv` to avoid any conflicts with preinstalled Python libraries. All testing done on Mac OS 13.2.1.
+* Fork the repo and clone
 
 ```bash
-git clone git@ssh.gitlab.aws.dev:arvsoni/specctl.git
+git clone git@github.com:awslabs/specctl.git
 cd specctl
-pip install --editable .
+pip install virtualenv
+virtualenv .venv
+source .venv/bin/activate
+pip install specctl
 specctl --help
 ```
 ### Kubernetes to ECS
