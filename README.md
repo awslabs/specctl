@@ -8,7 +8,7 @@ For Kubernetes to ECS converstion the tool uses [Terraform](https://developer.ha
 * Fork the repo and clone
 
 ```bash
-git clone git@github.com:awslabs/specctl.git
+git clone https://github.com/awslabs/specctl.git
 cd specctl
 pip install virtualenv
 virtualenv .venv
@@ -48,7 +48,6 @@ Click on the URL and you should see the NGINX home page! **Congrats, you have co
 The `specctl` will generate following artifacts in `./output` directory.
 * `namespaces` : contains (a) Kubernetes namespaces for creating CloudMap namespaces for service discovery, and (b) SSM parameters with both simple string obtained from ConfigMaps and secure strings obtained from Secrets. The Terraform code to create required AWS resources is also generated. The terraform init and apply commands created all the resources based on data extracted from Kubernetes namespaces, configmaps, and secrets.
 * `<namespace>/<service>` : a set of folders one for each Kubernetes namespace and inside that a service folder one for each Kubernetes service in the namespace. The Terraform code to create the service, task definition, and if applicable ALB resources, is auto-generated and available in the service folder. The terraform init and apply commands created all resources based on data extracted from Kubernetes service and deployments.
-
 To clean up, assuming you are in `specctl` directory
 ```bash
 cd output/default/nginx-svc
@@ -58,13 +57,12 @@ terraform destroy --auto-approve
 cd ../..
 rm -rf output
 ```
-
 ### Conversions at scale from a cluster
 `specctl` is built with scalable migration in mind. For the Kubernetes to ECS migration, for example, every service has its Terraform code and extracted settings in a seprate folder. By adding a CI/CD pipeline and S3 bucket (for Terraform state), the deployment of ECS services can be completely automated for all the services. The Terraform infra-as-code approach makes it easy to extend and customize to meet customer's application needs. 
 
-To test conversion at scale for Kubernetes to ECS, we can use the `tests/retail-store` example. Start by creating this application in Kubernetes. You can use `minikube`if you don't have a Kubernetes cluster handy. There is a convenience script `specctl/bin/migrate.sh` to recursively apply `terraform init` and `terraform apply --auto-approve` in each of the service directories. 
+To test conversion at scale for Kubernetes to ECS, we can use the `tests/retail-store` example. Start by creating this application in Kubernetes. You can use `minikube`if you don't have a Kubernetes cluster handy. 
 
-Assuming you are in `specctl` directory.
+Assuming you are in `specctl` directory and you have cleaned up the previous example `./output` directory.
 ```bash
 kubectl apply -f tests/retail-store
 ...
@@ -83,7 +81,9 @@ terraform init && terraform apply --auto-approve
 ...
 ...
 ```
-The above will create all the shared resources in various namespaces that are extracted. Shared resources include SSM Parameters, ALBs, CloudMap namespaces. Now you can run the `migrate.sh` script from the `/output` folder to recursively create all the extracted services. Below is assuming your are in `namespaces` folder from above step.
+The above will create all the shared resources in various namespaces that are extracted. Shared resources include SSM Parameters, ALBs, CloudMap namespaces. 
+
+There is a convenience script `specctl/bin/migrate.sh` to recursively apply `terraform init` and `terraform apply --auto-approve` in each of the service directories. Below is assuming your are in `namespaces` folder from above step. 
 
 ```bash
 cd ..

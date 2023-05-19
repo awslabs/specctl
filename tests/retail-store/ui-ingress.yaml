@@ -12,9 +12,7 @@ metadata:
     # HIGHLIGHT
     alb.ingress.kubernetes.io/group.name: retail-app-group
     alb.ingress.kubernetes.io/ip-address-type: dualstack
-    alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS": 443}]'
-    alb.ingress.kubernetes.io/ssl-policy: ELBSecurityPolicy-TLS-1-1-2017-01
-    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-west-2:022457860714:certificate/f085039b-31bf-48da-9753-bef5937e9633
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}]'
 spec:
   ingressClassName: alb
   rules:
