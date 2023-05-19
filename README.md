@@ -159,7 +159,12 @@ Options:
   --input_file TEXT               File with additional input parameters for
                                   task, container, and/or services
   --tfvars_file TEXT              File to write the Terraform tfvars
-  --output_directory TEXT         Path to output directory
+  -d, --tf_modules_directory TEXT
+                                  Path to Terraform modules directory
+  --tf_modules_name_map TEXT      Change the value in this map to your
+                                  terraform modules directory
+  --tf_files TEXT                 List of files to use from Terraform modules
+  -o, --output_directory TEXT     Path to output directory
   --ecs_cluster_name TEXT         ECS cluster to extract services and tasks
   --ecs_region_name TEXT          Region name for ECS cluster
   --sgp                           Create EKS Security Group Policy from task
@@ -176,4 +181,10 @@ Options:
 * The `--sd_file` refers to JSON file for service definition and is set to `servicedefinition.json`. The actual output file is of the format `<output_directory>/<service_namespace>/<service_name>/taskdefinition.json`
 * The `--input_file` is to provide additional input to add or update the parsed input in task definition and service definition JSON output. See sample [input.json](./lb_service_input.json.example) files for content format.
 * The `--tfvars_file` is to provide the terraform tfvars output and set to `terraform.tfvars`. The actual output is of the form `<output_directory>/terraform.tfvars` and `<output_directory>/<service_namespace>/<service_name>/terraform.fvars`.
-* The `--output_directory` is the path to output directory. Default is `./output`.
+* The `-d` options is to provide the path to Terraform modules directory. Default is "./terraform" from where the specctl command is launched.
+* The `--tf_modules_name_map` is to provide a map of what are the folder names for the `namespaces`, `ecs-lb-service`, and `ecs-backend-service` modules. Default is `"namespaces:namespaces,ecs-lb-service:ecs-lb-service,ecs-backend-service:ecs-backend-service"`. Keep the keys same and change module folder name as applicable. The module folders should be under the Terraform modules directory provided by `-d` option.
+* The `--tf_files` is to provide a comma separated string of Terraform files to copy from the modules. Default is `"main.tf,versions.tf,variables.tf,outputs.tf"`
+* The `-o` is the path to output directory. Default is `./output`.
+* The `--ecs_cluster_name` is to provide name of ECS cluster to extract services and tasks to conver to Kubernetes specifications
+* The `--ecs_region_name` is to provide region name for ECS cluster
+* The `--sgp` flag is to control whether or not to create EKS security group policies based on ECS task security groups. By default specctl doesn't create the security group policies because pod networking can be quite different.

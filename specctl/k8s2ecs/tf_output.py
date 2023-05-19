@@ -8,13 +8,6 @@ import logging
 logger = logging.getLogger(__name__)
 
 # This will generate TFvars format output key = value
-TF_MODULES_DIRECTORY = {
-    "namespaces": "./terraform/namespaces",
-    "ecs-lb-service": "./terraform/ecs-lb-service",
-    "ecs-backend-service": "./terraform/ecs-backend-service"
-}
-TF_FILES = ["main.tf","variables.tf","outputs.tf", "versions.tf"]
-
 def hcl_fmt(value):
     if type(value) == int or type(value) == float:
         return str(value)
@@ -34,16 +27,32 @@ def write_hcl_dict_list(dict_list_obj, tf_file, ignore_keys=[]):
     for dict_obj in dict_list_obj:
         write_hcl_dict(dict_obj, tf_file, ignore_keys)
 
-def copy_tf_modules(src_dir, dest_dir):
-    for fn in TF_FILES:
+def copy_tf_modules(src_dir, dest_dir, tf_files):
+    for fn in tf_files:
         src_file = os.path.join(src_dir, fn)
         if not os.path.isfile(src_file): continue
         logger.info("Copying TF modules %s to %s"%(src_file, dest_dir))
         shutil.copy(src_file, dest_dir)
     return
+def get_tf_modules_directory_map(tf_modules_directory, tf_modules_name_map):
+    tf_modules_list = tf_modules_name_map.split(",")
+    tf_modules_directory_map = {}
+    for tf_module in tf_modules_list:
+        key = tf_module.split(":")[0].strip()
+        value = tf_module.split(":")[1].strip()
+        value_with_path =os.path.join(tf_modules_directory,value)
+        tf_modules_directory_map[key]=value_with_path
+        if not os.path.exists(value_with_path):
+            logger.error("Terraform module path %s for key %s doesn't exist"%(value_with_path,key))
+    return tf_modules_directory_map
 
 def terraform_print(output_dict, options):
     # where are the terraform modules
+    tf_modules_directory = options.get("tf_modules_directory")
+    tf_modules_name_map = options.get("tf_modules_name_map")
+    tf_files = [f.strip() for f in options.get("tf_files").split(",")]
+    tf_modules_directory_map = get_tf_modules_directory_map(tf_modules_directory, tf_modules_name_map)
+
     # ssm secrets, parameters, and namespaces are written in output/namespaces/terraform.tfvars
     output_dir = os.path.join(options.get("output_directory"),"namespaces")
     try:
@@ -64,7 +73,7 @@ def terraform_print(output_dict, options):
     write_hcl_dict_list(total_params, tfvars_file, [])
     write_hcl("namespaces", namespaces, tfvars_file)
     write_hcl_dict(ingress, tfvars_file)
-    copy_tf_modules(TF_MODULES_DIRECTORY.get("namespaces"), output_dir)
+    copy_tf_modules(tf_modules_directory_map.get("namespaces"), output_dir, tf_files)
     # rest are written in output/namespace/service/terraform.tfvars
     services = output_dict.get("services",[])
     for svc in services:
@@ -109,8 +118,8 @@ def terraform_print(output_dict, options):
         write_hcl_dict(svc, tfvars_file, ["deployment","lb_ports"])
         svc_type = svc.get("service_type","ClusterIP")
         if svc_type == "LoadBalancer":
-            copy_tf_modules(TF_MODULES_DIRECTORY["ecs-lb-service"], output_dir)
+            copy_tf_modules(tf_modules_directory_map["ecs-lb-service"], output_dir, tf_files)
         else:
-            copy_tf_modules(TF_MODULES_DIRECTORY["ecs-backend-service"], output_dir)
+            copy_tf_modules(tf_modules_directory_map["ecs-backend-service"], output_dir, tf_files)
 
     logger.log(100, "Please see %s directory for terraform tfvars" %(options.get("output_directory")))

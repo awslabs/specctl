@@ -77,11 +77,14 @@ def k2e_cli_handler(source, context, options):
 @click.option("--sd_file",default="servicedefinition.json", help="File to write ECS service definition json")
 @click.option("--input_file", default="", help="File with additional input parameters for task, container, and/or services")
 @click.option("--tfvars_file", default="terraform.tfvars", help="File to write the Terraform tfvars")
-@click.option("--output_directory", default="./output", help="Path to output directory")
+@click.option("-d", "--tf_modules_directory", default="./terraform", help="Path to Terraform modules directory")
+@click.option("--tf_modules_name_map", default="namespaces:namespaces,ecs-lb-service:ecs-lb-service,ecs-backend-service:ecs-backend-service", help="Change the value in this map to your terraform modules directory")
+@click.option("--tf_files", default="main.tf,versions.tf,variables.tf,outputs.tf", help="List of files to use from Terraform modules")
+@click.option("-o", "--output_directory", default="./output", help="Path to output directory")
 @click.option("--ecs_cluster_name", default="", type=str, help="ECS cluster to extract services and tasks")
 @click.option("--ecs_region_name", default="", type=str, help="Region name for ECS cluster")
 @click.option("--sgp", is_flag="True", help="Create EKS Security Group Policy from task security groups")
-def transform(mode, source, context, log_level, namespaces, td_file, sd_file, input_file, tfvars_file, output_directory, ecs_cluster_name, ecs_region_name, sgp):
+def transform(mode, source, context, log_level, namespaces, td_file, sd_file, input_file, tfvars_file, tf_modules_directory, tf_modules_name_map, tf_files, output_directory, ecs_cluster_name, ecs_region_name, sgp):
     logger.setLevel(getattr(logging,log_level.upper()))
     for handler in logger.handlers:
         handler.setLevel(getattr(logging,log_level.upper()))
@@ -98,6 +101,9 @@ def transform(mode, source, context, log_level, namespaces, td_file, sd_file, in
         "sd_file": sd_file,
         "input_file": input_file,
         "tfvars_file": tfvars_file,
+        "tf_modules_directory": tf_modules_directory,
+        "tf_modules_name_map": tf_modules_name_map,
+        "tf_files": tf_files,
         "output_directory" : output_directory,
         "cluster_name" : ecs_cluster_name,
         "region_name" : ecs_region_name,
