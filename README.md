@@ -1,6 +1,9 @@
 # specctl 
-The `specctl` is a command-line based tool to extract and transform Kubernetes objects to ECS and vice versa. It has two modes, `-m k2e` (default) convert Kubernetes to ECS and `-m e2k` for ECS to Kubernetes. Currenly, only ECS Fargate is supported. 
-For Kubernetes to ECS converstion the tool uses [Terraform](https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli) to create all the necessary AWS resources needed to run services and tasks on ECS. For ECS to Kubernetes you can simply use `kubectl` on the generated spec. 
+The `specctl` is a command-line based tool to extract and transform Kubernetes objects to ECS and vice versa. It has two modes, `-m k2e` (default) convert Kubernetes to ECS and `-m e2k` for ECS to Kubernetes. Currently, only ECS Fargate is supported.
+
+For Kubernetes to ECS conversion, `specctl` can read and convert Kubernetes objects either from Kubernetes YAML specification files or from Kubernetes clusters. The tool uses [Terraform](https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli) to create all the necessary AWS resources needed to run services and tasks on ECS. 
+
+For ECS to Kubernetes, `specctl` can read and convert ECS and related AWS objects from an AWS account where the ECS cluster is running. Once the Kubernetes YAML specifications are generated, you can simply use `kubectl` on the generated spec. 
 
 ### Getting Started
 * Install [Terraform](https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli)
@@ -107,21 +110,22 @@ cd ../..
 rm -rf output
 ```
 #### What all K8s objects does specctl convert to ECS? 
-- [X] Deployment
+- [X] Deployment and ReplicaSets
 - [X] Service including ClusterIP, Load Balancer
-- [X] Ingress with HTTP 
+- [X] Ingress with HTTP and HTTPS (AWS ALB only)
 - [X] Pod IAM via Service Account
 - [X] ConfigMaps
 - [X] Secrets
-- [X] Container specs along with init-containers, and named ports handling
+- [X] Container specs along with init-containers, and named port handling
 - [X] Fargate size determination based on cpu and mem reservation and limit
-- [X] Ingress with HTTPS esp. certificate handling
 - [X] Pod Security Group
+- [ ] DaemonSets
 - [ ] Jobs
 - [ ] Container volumes
+- [ ] StatefulSets
 - [ ] ?
 
-**Note** K8s allows multiple variations for the service discovery, for example, `svc-name` or `svc-name.namespace` or `svc-name.namespace.svc.cluster.local`. But in ECS the service discovery name is `svc-name.namespace` (where namespace is in CloudMap). You may need to do some manual changes to the service endpoints configurations if they are not able to discover each other. This concern applies to both ECS to K8s and K8s to ECS conversions. 
+**Note:** Kubernetes allows multiple variations for the service discovery, for example, `svc-name` or `svc-name.namespace` or `svc-name.namespace.svc.cluster.local`. But in ECS the service discovery name is `svc-name.namespace` (where namespace is in CloudMap). You may need to do some manual changes to the service endpoints configurations if they are not able to discover each other. This concern applies to both ECS to K8s and K8s to ECS conversions. 
 
 ### ECS to Kubernetes 
 To do the reverse simply run the below command and it will generate the Kubernetes deployment, service, configmap, and secrets YAML specification files. Note to change the cluster name and/or region name if you created ECS cluster in a different region or are using your own ECS cluster in a different region. You can create Kubernetes namespace and deploy the generated artifacts to test. 
@@ -134,8 +138,8 @@ ls output/core-infra
 - [X] ECS Task to Pod
 - [X] ECS Service to K8s Service & K8s Deployment  
 - [X] ECS Load Balanced Service to K8s Ingress
-- [X] SSP Parameter Simple Strings to K8s ConfigMap 
-- [X] SSP Parameter SecureString to K8s Secrets
+- [X] SSM Parameter Simple Strings to K8s ConfigMap 
+- [X] SSM Parameter SecureString to K8s Secrets
 - [X] Secrets Manager to K8s Secrets
 - [X] Task IAM to IAM annotations on Service Account
 - [X] Task Security Group to EKS Security Group Policy 
@@ -174,7 +178,7 @@ Options:
                                   security groups
   --help                          Show this message and exit.
 ```
-* `specctl` currenly reads and extracts information from Kubernetes `Deployment`,`Service`, `ConfigMap`, and `Secrets` objects. It can read these objects from a file/folder or directly from a Kubernetes cluster.
+* `specctl` can read Kubernetes objects from a file/folder or directly from a Kubernetes cluster.
 * If `-s` source path to the K8s YAML file or directory is provided, `specctl` will use those specification files to read and extract information to create `taskdefinition.json`, `servicedefinition.json`, and `terraform.tfvars` files.
 * If `-c`, cluster kubeconfig context is provided, then `specctl` will read the deployments, services, configmaps, secrets directly from K8s cluster and generate the output files.
 * If both `-s` and `-c` are provided then behavior is same as just `-s`, that is, to process file(s) at that source path.
@@ -182,12 +186,12 @@ Options:
 * The `-l` option is to control logging. Default log level is `INFO`.
 * The `--td_file` refers to JSON file for task definition and is set to `taskdefinition.json`. The actual output file is of the format `<output_directory>/<service_namespace>/<service_name>/taskdefinition.json`
 * The `--sd_file` refers to JSON file for service definition and is set to `servicedefinition.json`. The actual output file is of the format `<output_directory>/<service_namespace>/<service_name>/taskdefinition.json`
-* The `--input_file` is to provide additional input to add or update the parsed input in task definition and service definition JSON output. See sample [input.json](./lb_service_input.json.example) files for content format.
+* The `--input_file` is to provide additional input to add or update the parsed input in task definition and service definition JSON output. 
 * The `--tfvars_file` is to provide the terraform tfvars output and set to `terraform.tfvars`. The actual output is of the form `<output_directory>/terraform.tfvars` and `<output_directory>/<service_namespace>/<service_name>/terraform.fvars`.
 * The `-d` options is to provide the path to Terraform modules directory. Default is "./terraform" from where the specctl command is launched.
 * The `--tf_modules_name_map` is to provide a map of what are the folder names for the `namespaces`, `ecs-lb-service`, and `ecs-backend-service` modules. Default is `"namespaces:namespaces,ecs-lb-service:ecs-lb-service,ecs-backend-service:ecs-backend-service"`. Keep the keys same and change module folder name as applicable. The module folders should be under the Terraform modules directory provided by `-d` option.
 * The `--tf_files` is to provide a comma separated string of Terraform files to copy from the modules. Default is `"main.tf,versions.tf,variables.tf,outputs.tf"`
 * The `-o` is the path to output directory. Default is `./output`.
-* The `--ecs_cluster_name` is to provide name of ECS cluster to extract services and tasks to conver to Kubernetes specifications
+* The `--ecs_cluster_name` is to provide name of ECS cluster to extract services and tasks to convert to Kubernetes specifications
 * The `--ecs_region_name` is to provide region name for ECS cluster
 * The `--sgp` flag is to control whether or not to create EKS security group policies based on ECS task security groups. By default specctl doesn't create the security group policies because pod networking can be quite different.
