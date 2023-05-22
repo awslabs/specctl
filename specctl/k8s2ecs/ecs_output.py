@@ -89,7 +89,7 @@ def get_task_def(svc, additional_input):
 
 # options needs task definition file td_file ;
 # service definition file sd_file ;
-# additiona input file input_file
+# additional input file input_file
 # The first two are to write the json output
 # The last input_file is to read additional json parameters for task/container/service
 def ecs_print(output_dict, options):
