@@ -247,6 +247,7 @@ def create_ingress_target_groups(ingress_list, svc_list):
                     if dict_check(svc_lb_ports) is None: continue
                     svc_port_number = svc_lb_ports.get("service_port")
                     svc_port_name = svc_lb_ports.get("service_port_name")
+                    svc_protocol = svc_lb_ports.get("listener_protocol","HTTP")
                     if svc_port_number is None: continue
                     if (backend_service_port_number is not None \
                         and svc_port_number == backend_service_port_number) or \
@@ -260,7 +261,7 @@ def create_ingress_target_groups(ingress_list, svc_list):
                         ingress["target_groups"][target_group_key] = {
                             "name": target_group_name,
                             "port": target_port,
-                            "protocol": listener_rule.get("protocol","HTTP"),
+                            "protocol": svc_protocol,
                             "tags":{"key":target_group_key},
                             "health_check":ingress.get("health_check",{})
                         }
