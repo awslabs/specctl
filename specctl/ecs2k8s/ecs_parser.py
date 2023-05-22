@@ -10,7 +10,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 def k8s_conform(input_string):
-    return(re.sub("[^a-zA-Z0-9]+","-", input_string).lower())
+    return(re.sub("[^a-zA-Z0-9]+","-", input_string).lower().rstrip("-"))
 
 def get_pod_iam(task_def, k8s_svc_account):
     pod_iam = task_def.get("taskRoleArn")
