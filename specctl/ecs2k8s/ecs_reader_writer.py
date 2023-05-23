@@ -7,6 +7,8 @@ from botocore.config import Config
 from pick import pick
 from .ecs_parser import ecs_parser, ssm_secret_parser, ingress_parser, namespace_parser
 import os
+import re
+import json
 import yaml
 import base64
 import logging
@@ -115,7 +117,7 @@ def get_ssm_and_secrets(region_name, task_definition):
                 continue
             if "arn:aws:secretsmanager" in valueFrom:
                 try:
-                    response = secret_mgr_client.get_secret_value(SecretId=valueFrom)
+                    response = retrieve_secret_value(secret_mgr_client, valueFrom)
                 except botocore.exceptions.ClientError as error:
                     logger.error("Unable to get secret %s %s"%(valueFrom, error))
                 if response is None:
@@ -140,6 +142,24 @@ def get_ssm_and_secrets(region_name, task_definition):
             if type == "String":
                already_seen[valueFrom]["value"] = base64.b64decode(value.encode("ascii")).decode("ascii")
     return(already_seen)
+    
+
+def retrieve_secret_value(secrets_client, value_from):
+    if not value_from.endswith("::"):
+        return secrets_client.get_secret_value(SecretId=value_from)
+    match = re.match(r"^(.*):([^:]+)::?$", value_from)
+    arn = match.group(1)
+    key = match.group(2)
+    response = secrets_client.get_secret_value(SecretId=arn)
+    secret_json = json.loads(response['SecretString'])
+    if key not in secret_json:
+        return None
+    return {
+        'ARN': arn,
+        'Name': key,
+        'SecretString': secret_json[key],
+    }
+    
 
 def ecs_get_task_definition(client, task_definition):
     response = client.describe_task_definition(
@@ -228,7 +248,6 @@ def ecs_reader_writer(options):
             svc_lbs = svc_def.get("loadBalancers")
             if svc_lbs is not None and len(svc_lbs)>0:
                 get_lb_details(region_name, svc_lbs)
-            
             svc_namespace = ""
             svc_registries = svc_def.get("serviceRegistries")
             if svc_registries is not None and len(svc_registries) > 0:
