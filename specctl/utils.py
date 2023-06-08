@@ -1,6 +1,6 @@
 # // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # // SPDX-License-Identifier: Apache-2.0
-from .quantity import parse_quantity
+from .quantity import parse_quantity 
 import math
 
 FARGATE_AVAILABLE_SKUS = {
@@ -51,12 +51,3 @@ def get_fargate_sku(cpu, mem):
 def dict_check(dict):
     if dict is None or len(dict)==0: return False
     return True
-
-
-
-            
-
-
-    
-
-    

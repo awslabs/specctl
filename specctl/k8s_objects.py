@@ -21,6 +21,30 @@ K8S_SERVICE = {
         "ports":[]
     }
 }
+
+K8S_DAEMONSET = {
+    "apiVersion":"apps/v1",
+    "kind":"DaemonSet",
+    "metadata": {
+        "name": "",
+        "labels":{}
+    },
+    "spec":{ 
+        "selector": {
+            "matchLabels": {}
+        },
+        "template" : {
+            "metadata": {
+                "labels":{}
+            },
+            "spec":{
+                "containers":[]
+            }
+        }
+    }
+
+}
+
 K8S_DEPLOYMENT = {
     "apiVersion": "apps/v1",
     "kind": "Deployment",

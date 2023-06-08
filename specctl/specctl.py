@@ -2,6 +2,7 @@
 # // SPDX-License-Identifier: Apache-2.0
 import click
 import json
+import yaml 
 from os import listdir, makedirs
 from os.path import isdir, isfile, join
 
@@ -9,10 +10,13 @@ from os.path import isdir, isfile, join
 from .ecs2k8s.ecs_reader_writer import ecs_reader_writer
 
 # k8s to ecs
-from .k8s2ecs.k8s_reader import k8s_yaml_to_dict, k8s_cluster_extract
+from .k8s2ecs.k8s_reader import k8s_cluster_extract
 from .k8s2ecs.k8s_parser import k8s_parser
 from .k8s2ecs.ecs_output import ecs_print
 from .k8s2ecs.tf_output import terraform_print
+
+# docker compose to k8s
+from .dc2k8s.dc_reader_writer import dc_reader_writer
 
 import logging
 import logging.config
@@ -43,7 +47,25 @@ LOGGING_CONFIG = {
 logging.config.dictConfig(LOGGING_CONFIG)
 logger = logging.getLogger()
 
-def e2k_cli_hanlder(options):
+# reads yaml file(s) from source and returns dictionary list
+def yaml_reader(source):
+    yaml_files = []
+    dict_list = []
+    if isfile(source) and source.lower().endswith(('.yaml','yml')): yaml_files.append(source)
+    if isdir(source):
+        yaml_files = [join(source,f) for f in listdir(source) if isfile(join(source, f)) and f.lower().endswith(('.yaml','yml'))]   
+   
+    for yf in yaml_files:
+        logger.info("Reading YAML from %s file"%(yf))
+        with open(yf, 'r') as input_stream:
+            try:
+                for schema in yaml.safe_load_all(input_stream):
+                    dict_list.append(schema)
+            except:
+                logger.error("Error reading %s YAML file %s"%(yf, yaml.YAMLError))
+    return (dict_list)
+
+def e2k_cli_handler(options):
     ecs_reader_writer(options)
     return
 
@@ -52,11 +74,7 @@ def k2e_cli_handler(source, context, options):
     if len(source)<=0:
         spec_list=k8s_cluster_extract(options.get("namespaces"), context)    
     else:
-        yaml_files = []
-        if isfile(source) and source.lower().endswith(('.yaml','yml')): yaml_files.append(source)
-        if isdir(source):
-            yaml_files = [join(source,f) for f in listdir(source) if isfile(join(source, f)) and f.lower().endswith(('.yaml','yml'))]
-        spec_list=k8s_yaml_to_dict(yaml_files)
+        spec_list=yaml_reader(source)
     
     if len(spec_list) <= 0:
         logger.warning("Found no K8s specification object")
@@ -66,10 +84,19 @@ def k2e_cli_handler(source, context, options):
     terraform_print(output_dict, options)
     return
 
+def d2k_cli_handler(source, options):
+    spec_list=yaml_reader(source)
+    if len(spec_list) <= 0:
+        logger.warning("Found no docker compose specification object")
+        return
+    dc_reader_writer(spec_list, options)
+    return 
+
+
 # Click cli entry point function
 @click.command()
-@click.option("-m","--mode", default="k2e", type=click.Choice(["k2e","e2k"], case_sensitive=False), help="Transform mode - k2e K8s-to-ECS, e2k ECS-to-K8s")
-@click.option("-s", "--source", default="", type=str, help="Path to k8s spec file or dir")
+@click.option("-m","--mode", default="k2e", type=click.Choice(["k2e","e2k","d2k"], case_sensitive=False), help="Transform mode - k2e K8s-to-ECS, e2k ECS-to-K8s, d2k Docker Compose-to-K8s")
+@click.option("-s", "--source", default="", type=str, help="Path to YAML specification file or directory")
 @click.option("-c", "--context", default="", type=str, help="Kubeconfig context name to load")
 @click.option("-l", "--log_level", default="WARNING", type=click.Choice(["DEBUG","INFO","WARNING","ERROR","CRITICAL"], case_sensitive=False), help="Select log level")
 @click.option("-n", "--namespaces", default="", type=str, help="Only fetch namespaces specified here as comma separated string. Applies only when converting from K8s clusters and not from spec files")
@@ -113,7 +140,10 @@ def transform(mode, source, context, log_level, namespaces, td_file, sd_file, in
         k2e_cli_handler(source, context, options)
         return
     if mode == "e2k":
-        e2k_cli_hanlder(options)
+        e2k_cli_handler(options)
+        return
+    if mode == "d2k":
+        d2k_cli_handler(source, options)
         return
     if mode == "e2f":
         logger.info("ECS EC2 to ECS FG is coming soon!")

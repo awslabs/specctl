@@ -281,9 +281,7 @@ def ecs_reader_writer(options):
                 for k,v in k8s_ns.items():
                     k8s_file = os.path.join(output_dir, k+".yaml")
                     write_yaml(k8s_file, [v])
-                
-                
-
+            
     logger.log(100, "Please see %s directory for kubernetes artifacts" %(options.get("output_directory")))
 
 
