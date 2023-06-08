@@ -129,20 +129,3 @@ def k8s_cluster_extract(namespace_list, contextname=""):
                 if last_cfg is not None:
                     security_groups.append(json.loads(last_cfg))
     return(services+deployments+secrets+configmaps+ingress+service_accounts+security_groups)
-
-
-# # This function will parse the K8s yaml files. It will convert the YAML to dictionary objects
-# def k8s_yaml_to_dict(yaml_files):
-#     dict_list = []
-#     # read all the K8s spec YAML files as dictionaries
-#     for yf in yaml_files:
-#         logger.info("Reading YAML from %s file"%(yf))
-#         with open(yf, 'r') as input_stream:
-#             try:
-#                 for schema in yaml.safe_load_all(input_stream):
-#                     dict_list.append(schema)
-#             except:
-#                 logger.error("Error reading %s YAML file %s"%(yf, yaml.YAMLError))
-#     # this will be the output dictionary which will have
-#     # list of deployments, services, pods, secrets, and configmaps
-#     return (dict_list)
