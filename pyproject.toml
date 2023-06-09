@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "specctl"
-version = "0.1.5"
+version = "0.1.6"
 description = ""
 authors = ["Arvind Soni <arvindsoni@gmail.com>"]
 license = "Apache 2.0"
