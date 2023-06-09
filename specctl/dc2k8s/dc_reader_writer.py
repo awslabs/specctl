@@ -3,6 +3,7 @@ import json
 import yaml
 from ..utils import dict_check
 from .dc_parser import dc_service_parser
+from dotenv import dotenv_values
 
 import logging
 
@@ -17,12 +18,17 @@ def write_yaml(filename, spec_list):
           kf.write("---\n")
 
 def dc_reader_writer(spec_list, options):
+    #first load any values supplied via env files
+    ext_values_file = options.get("env_file")
+    ext_values = {}
+    if os.path.isfile(ext_values_file):
+        ext_values = dotenv_values(ext_values_file)
     for spec in spec_list:
         services = spec.get("services")
         if not dict_check(services): continue
         for svc_name,dc_svc in services.items():
             dc_svc["service_name"]=svc_name
-            k8s_yamls = dc_service_parser(dc_svc)
+            k8s_yamls = dc_service_parser(dc_svc, ext_values)
         
             output_dir = os.path.join(options.get("output_directory"), svc_name)
             try:

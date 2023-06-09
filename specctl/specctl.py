@@ -111,7 +111,8 @@ def d2k_cli_handler(source, options):
 @click.option("--ecs_cluster_name", default="", type=str, help="ECS cluster to extract services and tasks")
 @click.option("--ecs_region_name", default="", type=str, help="Region name for ECS cluster")
 @click.option("--sgp", is_flag="True", help="Create EKS Security Group Policy from task security groups")
-def transform(mode, source, context, log_level, namespaces, td_file, sd_file, input_file, tfvars_file, tf_modules_directory, tf_modules_name_map, tf_files, output_directory, ecs_cluster_name, ecs_region_name, sgp):
+@click.option("-e", "--env_file", default="", help="Path to the environment file to use for docker compose external values")
+def transform(mode, source, context, log_level, namespaces, td_file, sd_file, input_file, tfvars_file, tf_modules_directory, tf_modules_name_map, tf_files, output_directory, ecs_cluster_name, ecs_region_name, sgp, env_file):
     logger.setLevel(getattr(logging,log_level.upper()))
     for handler in logger.handlers:
         handler.setLevel(getattr(logging,log_level.upper()))
@@ -134,7 +135,8 @@ def transform(mode, source, context, log_level, namespaces, td_file, sd_file, in
         "output_directory" : output_directory,
         "cluster_name" : ecs_cluster_name,
         "region_name" : ecs_region_name,
-        "sgp": sgp
+        "sgp": sgp,
+        "env_file": env_file
         }
     if mode == "k2e":
         k2e_cli_handler(source, context, options)
