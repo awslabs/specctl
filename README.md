@@ -7,6 +7,8 @@ For ECS to Kubernetes, `specctl` can read and convert ECS and related AWS object
 
 **New** Check out initial version of [Docker Compose to Kubernetes YAML](./specctl/dc2k8s/README.md) support.
 
+**Note**: Specctl helps accelerate the process of migrating between container orchestrators by automating much of the drudgery involved in converting resources by hand. However, there are inherent differences between container orchestrators and their features that cannot always be translated by automation. We recommend you test the output in a non-production environment and verify the results, and make manual changes as necessary to successfully complete your migration. As you find any bugs or enhancements we encourage you to open issues and/or submit pull requests! 
+
 ### Getting Started
 * Install [Terraform](https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli)
 * I would recommend to use `virtualenv` to avoid any conflicts with preinstalled Python libraries. All testing done on Mac OS 13.2.1.
