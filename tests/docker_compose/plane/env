@@ -66,4 +66,6 @@ DEFAULT_EMAIL="captain@plane.so"
 DEFAULT_PASSWORD="password123"
 
 # Auto generated and Required that will be generated from setup.sh
-BUILD_plane-proxy="nginx"
+NEXT_PUBLIC_API_BASE_URL=http://localhost
+SECRET_KEY="7qs98zzkew1adoq6e5ym0x3iqxssoarv2jgr9uiqu7kn87t7nl"
+WEB_URL=http://localhost
