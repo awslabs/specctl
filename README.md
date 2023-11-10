@@ -1,7 +1,7 @@
 # specctl 
 The `specctl` is a command-line based tool to extract and transform Kubernetes objects to ECS and vice versa. It has two modes, `-m k2e` (default) convert Kubernetes to ECS and `-m e2k` for ECS to Kubernetes. Currently, only ECS Fargate is supported.
 
-For Kubernetes to ECS conversion, `specctl` can read and convert Kubernetes objects either from Kubernetes YAML specification files or from Kubernetes clusters. The tool uses [Terraform](https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli) to create all the necessary AWS resources needed to run services and tasks on ECS. 
+For Kubernetes to ECS conversion, `specctl` can read and convert Kubernetes objects from Kubernetes YAML specification files, from live Kubernetes clusters, or from [Helm](https://helm.sh/) by first [locally rendering charts](https://helm.sh/docs/helm/helm_template/) into local YAML files. The tool uses [Terraform](https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli) to create all the necessary AWS resources needed to run services and tasks on ECS. 
 
 For ECS to Kubernetes, `specctl` can read and convert ECS and related AWS objects from an AWS account where the ECS cluster is running. Once the Kubernetes YAML specifications are generated, you can simply use `kubectl` on the generated spec.
 
